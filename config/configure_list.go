@@ -59,7 +59,7 @@ func doConfigureList(w io.Writer) {
 			cred = "AK:" + "***" + GetLastChars(pf.AccessKeyId, 3)
 		case StsToken:
 			cred = "StsToken:" + "***" + GetLastChars(pf.AccessKeyId, 3)
-		case RamRoleArn:
+		case RamRoleArn, RamRoleArnWithServiceIdentity:
 			cred = "RamRoleArn:" + "***" + GetLastChars(pf.AccessKeyId, 3)
 		case EcsRamRole:
 			cred = "EcsRamRole:" + pf.RamRoleName

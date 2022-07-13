@@ -14,7 +14,7 @@ build: deps
 	go build -ldflags "-X 'github.com/aliyun/aliyun-cli/cli.Version=${VERSION}'" -o out/aliyun main/main.go
 
 install: build
-	cp out/aliyun /usr/local/bin
+	cp out/aliyun $$(go env GOPATH)/bin
 
 build_mac:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags "-X 'github.com/aliyun/aliyun-cli/cli.Version=${VERSION}'" -o out/aliyun main/main.go

@@ -45,7 +45,7 @@ func NewConfigureCommand() *cli.Command {
 		Short: i18n.T(
 			"configure credential and settings",
 			"配置身份认证和其他信息"),
-		Usage: "configure --mode {AK|StsToken|RamRoleArn|EcsRamRole|RsaKeyPair|RamRoleArnWithRoleName|ChainableRamRoleArn} --profile <profileName>",
+		Usage: "configure --mode {AK|StsToken|RamRoleArn|EcsRamRole|RsaKeyPair|RamRoleArnWithRoleName|RamRoleArnWithServiceIdentity|ChainableRamRoleArn} --profile <profileName>",
 		Run: func(ctx *cli.Context, args []string) error {
 			if len(args) > 0 {
 				return cli.NewInvalidCommandError(args[0], ctx)
@@ -102,8 +102,8 @@ func doConfigure(ctx *cli.Context, profileName string, mode string) error {
 		case StsToken:
 			cp.Mode = StsToken
 			configureStsToken(w, &cp)
-		case RamRoleArn:
-			cp.Mode = RamRoleArn
+		case RamRoleArn, RamRoleArnWithServiceIdentity:
+			cp.Mode = AuthenticateMode(mode)
 			configureRamRoleArn(w, &cp)
 		case EcsRamRole:
 			cp.Mode = EcsRamRole

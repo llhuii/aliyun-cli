@@ -37,15 +37,16 @@ import (
 type AuthenticateMode string
 
 const (
-	AK                  = AuthenticateMode("AK")
-	StsToken            = AuthenticateMode("StsToken")
-	RamRoleArn          = AuthenticateMode("RamRoleArn")
-	EcsRamRole          = AuthenticateMode("EcsRamRole")
-	RsaKeyPair          = AuthenticateMode("RsaKeyPair")
-	RamRoleArnWithEcs   = AuthenticateMode("RamRoleArnWithRoleName")
-	ChainableRamRoleArn = AuthenticateMode("ChainableRamRoleArn")
-	External            = AuthenticateMode("External")
-	CredentialsURI      = AuthenticateMode("CredentialsURI")
+	AK                            = AuthenticateMode("AK")
+	StsToken                      = AuthenticateMode("StsToken")
+	RamRoleArn                    = AuthenticateMode("RamRoleArn")
+	RamRoleArnWithServiceIdentity = AuthenticateMode("RamRoleArnWithServiceIdentity")
+	EcsRamRole                    = AuthenticateMode("EcsRamRole")
+	RsaKeyPair                    = AuthenticateMode("RsaKeyPair")
+	RamRoleArnWithEcs             = AuthenticateMode("RamRoleArnWithRoleName")
+	ChainableRamRoleArn           = AuthenticateMode("ChainableRamRoleArn")
+	External                      = AuthenticateMode("External")
+	CredentialsURI                = AuthenticateMode("CredentialsURI")
 )
 
 type Profile struct {
@@ -108,7 +109,7 @@ func (cp *Profile) Validate() error {
 		if cp.StsToken == "" {
 			return fmt.Errorf("invalid sts_token")
 		}
-	case RamRoleArn:
+	case RamRoleArn, RamRoleArnWithServiceIdentity:
 		err := cp.ValidateAK()
 		if err != nil {
 			return err
@@ -270,6 +271,8 @@ func (cp *Profile) GetClient(ctx *cli.Context) (*sdk.Client, error) {
 		client, err = cp.GetClientBySts(config)
 	case RamRoleArn:
 		client, err = cp.GetClientByRoleArn(config)
+	case RamRoleArnWithServiceIdentity:
+		client, err = cp.GetClientByRamRoleArnWithServiceIdentity(config)
 	case EcsRamRole:
 		client, err = cp.GetClientByEcsRamRole(config)
 	case RsaKeyPair:
@@ -338,6 +341,19 @@ func (cp *Profile) GetClientByRamRoleArnWithEcs(config *sdk.Config) (*sdk.Client
 	return sdk.NewClientWithOptions(cp.RegionId, config, cred)
 }
 
+func (cp *Profile) GetClientByRamRoleArnWithServiceIdentity(config *sdk.Config) (*sdk.Client, error) {
+	client, err := cp.GetClientByAK(config)
+	if err != nil {
+		return nil, err
+	}
+	accessKeyID, accessKeySecret, StsToken, err := cp.GetSessionCredential(client)
+	if err != nil {
+		return nil, err
+	}
+	cred := credentials.NewStsTokenCredential(accessKeyID, accessKeySecret, StsToken)
+	return sdk.NewClientWithOptions(cp.RegionId, config, cred)
+}
+
 func (cp *Profile) GetSessionCredential(client *sdk.Client) (string, string, string, error) {
 	req := requests.NewCommonRequest()
 	rep := responses.NewCommonResponse()
@@ -350,8 +366,18 @@ func (cp *Profile) GetSessionCredential(client *sdk.Client) (string, string, str
 	} else {
 		req.Domain = "sts.aliyuncs.com"
 	}
-	req.ApiName = "AssumeRole"
-	req.QueryParams["RoleArn"] = cp.RamRoleArn
+
+	if cp.Mode != RamRoleArnWithServiceIdentity {
+		req.ApiName = "AssumeRole"
+		req.QueryParams["RoleArn"] = cp.RamRoleArn
+	} else {
+		req.ApiName = "AssumeRoleWithServiceIdentity"
+		req.QueryParams["RoleArn"] = cp.RamRoleArn
+		// RamRoleArn = strings.ToLower(fmt.Sprintf("acs:ram::%s:role/%s", aliUid, assumeRole))
+		aliUid := strings.Split(cp.RamRoleArn, ":")[3]
+		req.QueryParams["AssumeRoleFor"] = aliUid
+	}
+
 	req.QueryParams["RoleSessionName"] = cp.RoleSessionName
 	req.QueryParams["DurationSeconds"] = strconv.Itoa(cp.ExpiredSeconds)
 	req.TransToAcsRequest()

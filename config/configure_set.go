@@ -95,7 +95,7 @@ func doConfigureSet(w io.Writer, flags *cli.FlagSet) {
 		profile.AccessKeyId = AccessKeyIdFlag(flags).GetStringOrDefault(profile.AccessKeyId)
 		profile.AccessKeySecret = AccessKeySecretFlag(flags).GetStringOrDefault(profile.AccessKeySecret)
 		profile.StsToken = StsTokenFlag(flags).GetStringOrDefault(profile.StsToken)
-	case RamRoleArn:
+	case RamRoleArn, RamRoleArnWithServiceIdentity:
 		profile.AccessKeyId = AccessKeyIdFlag(flags).GetStringOrDefault(profile.AccessKeyId)
 		profile.AccessKeySecret = AccessKeySecretFlag(flags).GetStringOrDefault(profile.AccessKeySecret)
 		profile.RamRoleArn = RamRoleArnFlag(flags).GetStringOrDefault(profile.RamRoleArn)
